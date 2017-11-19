@@ -30,11 +30,17 @@ InfoMessage(){
 #[ $(grep -c "${USER}" /etc/passwd) -ne 1 ] && USER="ubuntu"
 
 
-[ ! -f ${TMPSHARED}/token ] && InfoMessage "Initiating Cluster" \
+[ ! -f ${TMPSHARED}/token  -a "${IP}" == "${MASTER_IP}" ] && InfoMessage "Initiating Cluster" \
 && echo $(sudo kubeadm token generate) > ${TMPSHARED}/token \
-&& kubeadm init  --token $(cat ${TMPSHARED}/token) --api-advertise-addresses ${IP} \
-&& exit
+&& kubeadm init  --token $(cat ${TMPSHARED}/token) --apiserver-advertise-address ${IP}  --service-dns-domain "k8s"  --skip-preflight-checks \
+&& mkdir -p $HOME/.kube \
+&& cp -i /etc/kubernetes/admin.conf $HOME/.kube/config \
+&& chown $(id -u):$(id -g) $HOME/.kube/config \
+&& kubectl apply -f \
+https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml \
+&&
+exit
 
 [ -f ${TMPSHARED}/token ] && InfoMessage "Joining Cluster" \
-&& kubeadm join  --token $(cat ${TMPSHARED}/token) ${MASTER_IP}\
+&& kubeadm join  --token $(cat ${TMPSHARED}/token) ${MASTER_IP}:6443 \
 && exit 

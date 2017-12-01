@@ -68,6 +68,12 @@ Vagrant.configure(2) do |config|
       bridge: ["enp4s0","wlp3s0","enp3s0f1","wlp2s0"],
       auto_config: true
 
+      #config.vm.provision "shell", inline: <<-SHELL
+      #	echo "useDNS no" >> /etc/ssh/sshd_config
+      #  update-ca-certificates
+      #  systemctl reload ssh
+      #SHELL
+
 
       config.vm.provision "shell", inline: <<-SHELL
         sudo apt-get update -qq && apt-get install -qq chrony && timedatectl set-timezone Europe/Madrid

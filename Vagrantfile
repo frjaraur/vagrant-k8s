@@ -84,14 +84,31 @@ Vagrant.configure(2) do |config|
       #  run: "always",
       #  inline: "route del default gw 192.168.56.1"
 
+      ## INSTALLDOCKER --> on script because we can reprovision
+      config.vm.provision "shell", inline: <<-SHELL
+      apt-get remove --purge -qq sudo apt-get remove docker docker-engine docker.io
+      apt-get install -qq \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        software-properties-common
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+        sudo add-apt-repository \
+        "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) \
+        stable"
+        sudo apt-get update -qq
+        apt-get install -qq docker-ce=17.03.2~ce-0~ubuntu-xenial
+        usermod -aG docker ubuntu
+      SHELL
+
 
       ## INSTALLKUBERNETES --> on script because we can reprovision
       config.vm.provision "shell", inline: <<-SHELL
         curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
         echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list 
-        apt-get update
-        apt-get install -y docker.io
-        apt-get install -y --allow-unauthenticated kubelet kubeadm kubectl kubernetes-cni 
+        apt-get update -qq
+        apt-get install -y --allow-unauthenticated kubelet kubeadm kubectl kubernetes-cni
       SHELL
 
 

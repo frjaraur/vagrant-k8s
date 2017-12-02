@@ -14,6 +14,8 @@ VAGRANT_USER=ubuntu
 VAGRANT_GROUP=ubuntu
 HOME_VAGRANT_USER=/home/ubuntu
 
+INIT_CLUSTER=0
+
 # DEFAULTS
 
 #DOCKER_ROOTDIR="${DOCKER_ROOTDIR:=/var/lib/docker}"
@@ -37,18 +39,30 @@ InfoMessage(){
 
 # Calico https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml \
 
-[ ! -f ${TMPSHARED}/token  -a "${IP}" == "${MASTER_IP}" ] && InfoMessage "Initiating Cluster" \
-&& echo $(sudo kubeadm token generate) > ${TMPSHARED}/token \
-&& kubeadm init  --token $(cat ${TMPSHARED}/token) --apiserver-advertise-address ${IP}  --service-dns-domain "k8s"  --skip-preflight-checks \
-&& mkdir -p $HOME/.kube \
+[ ! -f ${TMPSHARED}/token  -a "${IP}" == "${MASTER_IP}" ] && INIT_CLUSTER=1
+
+if [ ${INIT_CLUSTER} -eq 1 ]
+then
+    InfoMessage "Initiating Cluster" \
+    && echo $(sudo kubeadm token generate) > ${TMPSHARED}/token \
+    && kubeadm init  --token $(cat ${TMPSHARED}/token) --apiserver-advertise-address ${IP}  \
+    --service-dns-domain "k8s"  \
+    --pod-network-cidr=192.168.0.0/16 \
+    --skip-preflight-checks
+fi
+
+mkdir -p $HOME/.kube \
 && mkdir -p $HOME_VAGRANT_USER/.kube \
 && cp -i /etc/kubernetes/admin.conf $HOME/.kube/config \
 && cp -i /etc/kubernetes/admin.conf $HOME_VAGRANT_USER/.kube/config \
-&& chown $(id -u):$(id -g) $HOME/.kube/config \
-&& chown ${VAGRANT_USER}:${VAGRANT_GROUP} $HOME_VAGRANT_USER/.kube/config \
-&& kubectl apply -f https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml \
-&&
-exit
+&& chown -R $(id -u):$(id -g) $HOME/.kube \
+&& chown -R ${VAGRANT_USER}:${VAGRANT_GROUP} $HOME_VAGRANT_USER/.kube
+
+if [ ${INIT_CLUSTER} -eq 1 ] 
+then
+    kubectl apply -f https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+    exit
+fi
 
 [ -f ${TMPSHARED}/token ] && InfoMessage "Joining Cluster" \
 && kubeadm join  --token $(cat ${TMPSHARED}/token) ${MASTER_IP}:6443 \

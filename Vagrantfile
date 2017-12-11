@@ -84,6 +84,16 @@ Vagrant.configure(2) do |config|
       #  run: "always",
       #  inline: "route del default gw 192.168.56.1"
 
+      config.vm.provision :shell, :inline => update_hosts
+
+      if node['role'] == "client"
+	config.vm.provision "shell", inline: <<-SHELL
+      	   apt-get install -qq curl 
+        SHELL
+	next
+      end
+
+
       ## INSTALLDOCKER --> on script because we can reprovision
       config.vm.provision "shell", inline: <<-SHELL
       apt-get remove --purge -qq sudo apt-get remove docker docker-engine docker.io
@@ -112,16 +122,9 @@ Vagrant.configure(2) do |config|
       SHELL
 
 
-      config.vm.provision :shell, :inline => update_hosts
-
-
-
-
       config.vm.provision "file", source: "create_cluster.sh", destination: "/tmp/create_cluster.sh"
       config.vm.provision :shell, :path => 'create_cluster.sh' , :args => [ node['mgmt_ip'], master_ip ]
 
-#      config.vm.provision "file", source: "install_compose.sh", destination: "/tmp/install_compose.sh"
-#      config.vm.provision :shell, :path => 'install_compose.sh'
     end
   end
 

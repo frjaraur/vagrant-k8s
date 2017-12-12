@@ -35,6 +35,7 @@ Vagrant.configure(2) do |config|
     config.vm.define node['name'] do |config|
       config.vm.hostname = node['name']
       config.vm.provider "virtualbox" do |v|
+
         v.name = node['name']
         v.customize ["modifyvm", :id, "--memory", node['mem']]
         v.customize ["modifyvm", :id, "--cpus", node['cpu']]
@@ -86,12 +87,21 @@ Vagrant.configure(2) do |config|
 
       config.vm.provision :shell, :inline => update_hosts
 
+      config.vm.provision "shell", inline: <<-SHELL
+        sudo cp -R /src ~ubuntu
+        sudo chown -R ubuntu:ubuntu ~ubuntu/src
+      SHELL
+ 
+
+
       if node['role'] == "client"
-	config.vm.provision "shell", inline: <<-SHELL
-      	   apt-get install -qq curl 
+      	config.vm.provision "shell", inline: <<-SHELL
+          apt-get install -qq curl 
         SHELL
-	next
+	      next
       end
+
+
 
 
       ## INSTALLDOCKER --> on script because we can reprovision

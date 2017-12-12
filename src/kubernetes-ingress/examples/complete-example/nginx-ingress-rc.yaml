@@ -14,7 +14,7 @@ spec:
         app: nginx-ingress
     spec:
       containers:
-      - image: nginxdemos/nginx-ingress:1.0.0
+      - image: frjaraur/nginx-ingress:1.1
         imagePullPolicy: Always
         name: nginx-ingress
         ports:
@@ -30,6 +30,6 @@ spec:
         # Uncomment the lines below to enable extensive logging and/or customization of
         # NGINX configuration with configmaps
         args:
-         #- -v=3
+         - -v=3
          #- -nginx-configmaps=$(POD_NAMESPACE)/nginx-config
-          - -default-server-tls-secret=$(POD_NAMESPACE)/default-server-secret
+         - -default-server-tls-secret=$(POD_NAMESPACE)/default-server-secret

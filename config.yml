@@ -2,6 +2,7 @@ environment:
   domain: "dockerlab.local"
   masterip: "10.10.10.11"
   base_box: "ubuntu/xenial64"
+  engine_version: "17.03.2~ce-0~ubuntu-xenial"
 
 boxes:
 - name: "k8-1"

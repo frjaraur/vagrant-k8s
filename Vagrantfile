@@ -12,6 +12,8 @@ master_ip=config['environment']['masterip']
 
 domain=config['environment']['domain']
 
+engine_version=domain=config['environment']['engine_version']
+
 boxes = config['boxes']
 
 boxes_hostsfile_entries=""
@@ -25,6 +27,26 @@ boxes_hostsfile_entries=""
 update_hosts = <<SCRIPT
     echo "127.0.0.1 localhost" >/etc/hosts
     echo -e "#{boxes_hostsfile_entries}" |tee -a /etc/hosts
+SCRIPT
+
+
+$install_docker_engine = <<SCRIPT
+  #curl -sSk $1 | sh
+  DEBIAN_FRONTEND=noninteractive apt-get remove -qq docker docker-engine docker.io
+  DEBIAN_FRONTEND=noninteractive apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get install -qq \
+  apt-transport-https \
+  ca-certificates \
+  curl \
+  software-properties-common
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | DEBIAN_FRONTEND=noninteractive apt-key add -
+  add-apt-repository \
+  "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) \
+  stable"
+  DEBIAN_FRONTEND=noninteractive apt-get -qq update
+  DEBIAN_FRONTEND=noninteractive apt-get install -y docker-ce=$1
+  usermod -aG docker ubuntu 2>/dev/null
 SCRIPT
 
 Vagrant.configure(2) do |config|
@@ -84,7 +106,7 @@ Vagrant.configure(2) do |config|
 
 
       config.vm.provision "shell", inline: <<-SHELL
-        sudo apt-get update -qq && apt-get install -qq chrony && timedatectl set-timezone Europe/Madrid
+        sudo apt-get update -qq && apt-get install -qq ntpdate ntp && timedatectl set-timezone Europe/Madrid
       SHELL
 
       # Delete default router for host-only-adapter
@@ -123,22 +145,11 @@ Vagrant.configure(2) do |config|
       end
 
       ## INSTALLDOCKER --> on script because we can reprovision
-      config.vm.provision "shell", inline: <<-SHELL
-      apt-get remove --purge -qq sudo apt-get remove docker docker-engine docker.io
-      apt-get install -qq \
-        apt-transport-https \
-        ca-certificates \
-        curl \
-        software-properties-common
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-        sudo add-apt-repository \
-        "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-        $(lsb_release -cs) \
-        stable"
-        sudo apt-get update -qq
-        apt-get install -qq docker-ce=17.03.2~ce-0~ubuntu-xenial
-        usermod -aG docker ubuntu
-      SHELL
+      config.vm.provision "shell" do |s|
+     		s.name       = "Install Docker Engine version "+engine_version
+        	s.inline     = $install_docker_engine
+           	s.args       = engine_version
+      end
 
 
       ## INSTALLKUBERNETES --> on script because we can reprovision

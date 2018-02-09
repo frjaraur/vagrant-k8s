@@ -66,4 +66,5 @@ fi
 
 [ -f ${TMPSHARED}/token ] && InfoMessage "Joining Cluster" \
 && kubeadm join  --token $(cat ${TMPSHARED}/token) ${MASTER_IP}:6443 \
+--discovery-token-unsafe-skip-ca-verification \
 && exit 

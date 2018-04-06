@@ -25,6 +25,11 @@ boxes_hostsfile_entries=""
 
 #puts boxes_hostsfile_entries
 
+disable_swap = <<SCRIPT
+    sudo swapoff -a 
+    sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+SCRIPT
+
 update_hosts = <<SCRIPT
     echo "127.0.0.1 localhost" >/etc/hosts
     echo -e "#{boxes_hostsfile_entries}" |tee -a /etc/hosts
@@ -137,6 +142,7 @@ Vagrant.configure(2) do |config|
       #  inline: "route del default gw 192.168.56.1"
 
       config.vm.provision :shell, :inline => update_hosts
+      config.vm.provision :shell, :inline => disable_swap
 
       config.vm.provision "shell", inline: <<-SHELL
         sudo cp -R /src ~vagrant

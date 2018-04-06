@@ -4,15 +4,17 @@ IP=$1
 
 MASTER_IP=$2
 
+CALICO_URL=$3
+
 
 #SHARED Between Nodes..
 TMPSHARED="/tmp_deploying_stage"
 #Docker Multi Daemon
 
 
-VAGRANT_USER=ubuntu
-VAGRANT_GROUP=ubuntu
-HOME_VAGRANT_USER=/home/ubuntu
+VAGRANT_USER=vagrant
+VAGRANT_GROUP=vagrant
+HOME_VAGRANT_USER=/home/vagrant
 
 INIT_CLUSTER=0
 
@@ -60,7 +62,8 @@ mkdir -p $HOME/.kube \
 
 if [ ${INIT_CLUSTER} -eq 1 ] 
 then
-    kubectl apply -f https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+    #kubectl apply -f https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+    kubectl apply -f ${CALICO_URL}
     exit
 fi
 

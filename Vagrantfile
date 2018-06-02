@@ -1,12 +1,13 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
-Vagrant::DEFAULT_SERVER_URL.replace('https://vagrantcloud.com')
+#Vagrant::DEFAULT_SERVER_URL.replace('https://vagrantcloud.com')
 # Require YAML module
 require 'yaml'
 
 config = YAML.load_file(File.join(File.dirname(__FILE__), 'config.yml'))
 
 base_box=config['environment']['base_box']
+base_box_version=config['environment']['base_box_version']
 
 master_ip=config['environment']['masterip']
 
@@ -78,6 +79,7 @@ Vagrant.configure(2) do |config|
 #    config.ssh.password = 'ubuntu'
 #   end
   config.vm.box = base_box
+  config.vm.box_version = base_box_version
   config.vm.synced_folder "tmp_deploying_stage/", "/tmp_deploying_stage",create:true
   config.vm.synced_folder "src/", "/src",create:true
   boxes.each do |node|

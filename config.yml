@@ -1,7 +1,8 @@
 environment:
   domain: "dockerlab.local"
   masterip: "10.10.10.11"
-  base_box: "ubuntu/xenial64"
+  base_box: "frjaraur/xenial64"
+  base_box_version: "1.4"
   engine_version: "17.03.2~ce-0~ubuntu-xenial"
   calico_url: "https://docs.projectcalico.org/v3.0/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml"
 

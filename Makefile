@@ -1,5 +1,5 @@
 destroy:
-	@vagrant destroy -f
+	@vagrant destroy -f || true
 	@rm -rf tmp_deploying_stage
 
 create:

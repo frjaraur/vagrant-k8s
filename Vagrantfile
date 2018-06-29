@@ -14,6 +14,10 @@ master_ip=config['environment']['masterip']
 domain=config['environment']['domain']
 
 engine_version=config['environment']['engine_version']
+kubernetes_version=config['environment']['kubernetes_version']
+kubernetes_token=config['environment']['kubernetes_token']
+
+
 calico_url=config['environment']['calico_url']
 
 boxes = config['boxes']
@@ -55,22 +59,57 @@ $install_docker_engine = <<SCRIPT
   DEBIAN_FRONTEND=noninteractive apt-get -qq update
   DEBIAN_FRONTEND=noninteractive apt-get install -y docker-ce=$1
   usermod -aG docker vagrant >/dev/null
-  iptables -t nat -F
-  systemctl stop docker
-  ip link set docker0 down
-  ip link delete docker0
-  brctl addbr cbr0
-  ip addr add 172.16.0.0/16 dev cbr0
-  ip link set dev cbr0 up
-  printf '{\n
-  	"iptables": false, \n
-	"ip-masq": false, \n
-	"bridge": "cbr0" \n
-	}\n
-  ' >/etc/docker/daemon.json
+#  iptables -t nat -F
+#  systemctl stop docker
+#  ip link set docker0 down
+#  ip link delete docker0
+#  brctl addbr cbr0
+#  ip addr add 172.16.0.0/16 dev cbr0
+#  ip link set dev cbr0 up
+
+#   echo "auto cbr0
+#         iface cbr0 inet static
+##	    address 172.16.0.0
+#    	    netmask 255.255.0.0" >>/etc/network/interfaces
+
+#  printf '{\n
+#  	"iptables": false, \n
+#	"ip-masq": false, \n
+#	"bridge": "cbr0" \n
+#	}\n
+#  ' >/etc/docker/daemon.json
  
-  systemctl start docker
+#  systemctl start docker
 SCRIPT
+#  echo "auto cbr0
+# iface cbr0 inet static
+# bridge_ports eth1
+#    address 172.16.0.0
+#    netmask 255.255.0.0" >>/etc/network/interfaces
+
+
+
+$install_kubernetes = <<SCRIPT
+  curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+  echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list 
+  apt-get update -qq
+  apt-get install -y --allow-unauthenticated kubelet=$1 kubeadm=$1 kubectl=$1 kubernetes-cni
+SCRIPT
+
+$create_kubernetes_cluster = <<SCRIPT
+  kubeadm init --token "$(cat /tmp_deploying_stage/token)" --pod-network-cidr 10.244.0.0/16 --apiserver-advertise-address $1
+  sleep 30
+	mkdir -p ~vagrant/.kube
+	cp -i /etc/kubernetes/admin.conf ~vagrant/.kube/config
+	chown vagrant:vagrant ~vagrant/.kube/config
+  kubeadm token list |awk '/default-node-token/ { print $1 }'> /tmp_deploying_stage/token
+  kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+SCRIPT
+
+$join_kubernetes_cluster = <<SCRIPT
+  kubeadm join $1:6443 --token "$(cat /tmp_deploying_stage/token)" --discovery-token-unsafe-skip-ca-verification
+SCRIPT
+
 
 Vagrant.configure(2) do |config|
    VAGRANT_COMMAND = ARGV[0]
@@ -87,7 +126,7 @@ Vagrant.configure(2) do |config|
       config.vm.hostname = node['name']
       config.vm.provider "virtualbox" do |v|
         config.ssh.shell = "bash -c 'BASH_ENV=/etc/profile exec bash'"       
-	v.customize [ "modifyvm", :id, "--uartmode1", "disconnected" ]
+	      v.customize [ "modifyvm", :id, "--uartmode1", "disconnected" ]
         v.name = node['name']
         v.customize ["modifyvm", :id, "--memory", node['mem']]
         v.customize ["modifyvm", :id, "--cpus", node['cpu']]
@@ -177,22 +216,57 @@ Vagrant.configure(2) do |config|
       ## INSTALLDOCKER --> on script because we can reprovision
       config.vm.provision "shell" do |s|
      		s.name       = "Install Docker Engine version "+engine_version
-        	s.inline     = $install_docker_engine
-           	s.args       = engine_version
+        s.inline     = $install_docker_engine
+       	s.args       = engine_version
       end
 
 
       ## INSTALLKUBERNETES --> on script because we can reprovision
-      config.vm.provision "shell", inline: <<-SHELL
-        curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-        echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list 
-        apt-get update -qq
-        apt-get install -y --allow-unauthenticated kubelet kubeadm kubectl kubernetes-cni
-      SHELL
+      config.vm.provision "shell" do |s|
+        s.name       = "Install Kubernetes packages version "+kubernetes_version
+        s.inline     = $install_kubernetes
+        s.args       = kubernetes_version
+      end
 
+#       config.vm.provision "shell", inline: <<-SHELL
+# #      curl -sSL https://github.com/kubernetes-incubator/cri-tools/releases/download/v1.0.0-beta.1/crictl-v1.0.0-beta.1-linux-amd64.tar.gz \
+# #       -o crictl.tar.gz && tar -xvf crictl.tar.gz  && sudo mv crictl /usr/local/bin
+#         curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+#         echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list 
+#         apt-get update -qq
+#         apt-get install -y --allow-unauthenticated kubelet=$1 kubeadm=$1 kubectl=$1 kubernetes-cni=$1
+#       SHELL
 
-      config.vm.provision "file", source: "create_cluster.sh", destination: "/tmp/create_cluster.sh"
-      config.vm.provision :shell, :path => 'create_cluster.sh' , :args => [ node['mgmt_ip'], master_ip, calico_url ]
+      if node['role'] == "master"
+        config.vm.network "forwarded_port", guest: 6443, host: 6443, auto_correct: true
+        
+        config.vm.provision "shell" do |s|
+          s.name       = "Create Cluster"
+          s.inline     = $create_kubernetes_cluster
+          s.args       = master_ip
+        end
+
+	      # config.vm.provision "shell", inline: <<-SHELL
+        # kubeadm init --pod-network-cidr 10.244.0.0/16 --apiserver-advertise-address $(hostname -i)
+        # sleep 30
+	      # mkdir -p ~vagrant/.kube
+	      # cp -i /etc/kubernetes/admin.conf ~vagrant/.kube/config
+	      # chown vagrant:vagrant ~vagrant/.kube/config
+		    #   #kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+		    #   #sudo kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/k8s-manifests/kube-flannel-rbac.yml
+        #   #kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+        # SHELL
+      
+      else
+        config.vm.provision "shell" do |s|
+          s.name       = "Create Cluster"
+          s.inline     = $join_kubernetes_cluster
+          s.args       = master_ip
+        end     
+      end
+      
+#      config.vm.provision "file", source: "create_cluster.sh", destination: "/tmp/create_cluster.sh"
+#      config.vm.provision :shell, :path => 'create_cluster.sh' , :args => [ node['mgmt_ip'], master_ip, calico_url ]
 
     end
   end

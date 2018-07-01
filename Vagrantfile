@@ -103,7 +103,8 @@ $create_kubernetes_cluster = <<SCRIPT
 	cp -i /etc/kubernetes/admin.conf ~vagrant/.kube/config
 	chown vagrant:vagrant ~vagrant/.kube/config
   kubeadm token list |awk '/default-node-token/ { print $1 }'> /tmp_deploying_stage/token
-  kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+  while true;do curl -ksSL https://$1:6443 && break;done
+  kubectl --kubeconfig=/home/vagrant/.kube/config  apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
 SCRIPT
 
 $join_kubernetes_cluster = <<SCRIPT
@@ -241,7 +242,7 @@ Vagrant.configure(2) do |config|
         config.vm.network "forwarded_port", guest: 6443, host: 6443, auto_correct: true
         
         config.vm.provision "shell" do |s|
-          s.name       = "Create Cluster"
+          s.name       = "Create Kubernetes Cluster"
           s.inline     = $create_kubernetes_cluster
           s.args       = master_ip
         end
@@ -259,15 +260,12 @@ Vagrant.configure(2) do |config|
       
       else
         config.vm.provision "shell" do |s|
-          s.name       = "Create Cluster"
+          s.name       = "Join Kubernetes Cluster"
           s.inline     = $join_kubernetes_cluster
           s.args       = master_ip
         end     
       end
       
-#      config.vm.provision "file", source: "create_cluster.sh", destination: "/tmp/create_cluster.sh"
-#      config.vm.provision :shell, :path => 'create_cluster.sh' , :args => [ node['mgmt_ip'], master_ip, calico_url ]
-
     end
   end
 

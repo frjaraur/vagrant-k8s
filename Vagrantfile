@@ -31,8 +31,8 @@ boxes_hostsfile_entries=""
 #puts boxes_hostsfile_entries
 
 disable_swap = <<SCRIPT
-    sudo swapoff -a 
-    sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+    swapoff -a 
+    sed -i '/swap/ s/^\(.*\)$/#\1/g' /etc/fstab
 SCRIPT
 
 update_hosts = <<SCRIPT
@@ -94,6 +94,9 @@ $install_kubernetes = <<SCRIPT
   echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list 
   apt-get update -qq
   apt-get install -y --allow-unauthenticated kubelet=$1 kubeadm=$1 kubectl=$1 kubernetes-cni
+  sed -i '9s/^/Environment="KUBELET_EXTRA_ARGS=--fail-swap-on=false"\n/' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+  systemctl daemon-reload
+  systemctl enable kubelet
 SCRIPT
 
 $create_kubernetes_cluster = <<SCRIPT
@@ -175,7 +178,11 @@ Vagrant.configure(2) do |config|
 
 
       config.vm.provision "shell", inline: <<-SHELL
-        sudo apt-get update -qq && apt-get install -qq ntpdate ntp && timedatectl set-timezone Europe/Madrid
+        systemctl stop apt-daily.timer
+        systemctl disable apt-daily.timer
+        sed -i '/Update-Package-Lists/ s/1/0/' /etc/apt/apt.conf.d/10periodic
+        while true;do fuser -vki /var/lib/apt/lists/lock || break ;done
+        apt-get update -qq && apt-get install -qq ntpdate ntp && timedatectl set-timezone Europe/Madrid
       SHELL
 
       # Delete default router for host-only-adapter

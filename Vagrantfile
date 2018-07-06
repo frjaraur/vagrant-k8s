@@ -94,9 +94,10 @@ $install_kubernetes = <<SCRIPT
   echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list 
   apt-get update -qq
   apt-get install -y --allow-unauthenticated kubelet=$1 kubeadm=$1 kubectl=$1 kubernetes-cni
-  sed -i '9s/^/Environment="KUBELET_EXTRA_ARGS=--fail-swap-on=false"\n/' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+  sed -i \'9s/^/Environment="KUBELET_EXTRA_ARGS=--fail-swap-on=false"\\n/\' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
   systemctl daemon-reload
   systemctl enable kubelet
+  echo "Kubelet Configured without Swap"
 SCRIPT
 
 $create_kubernetes_cluster = <<SCRIPT

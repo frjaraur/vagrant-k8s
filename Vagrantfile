@@ -101,7 +101,7 @@ $install_kubernetes = <<SCRIPT
 SCRIPT
 
 $create_kubernetes_cluster = <<SCRIPT
-  kubeadm init --token "$(cat /tmp_deploying_stage/token)" --pod-network-cidr 10.244.0.0/16 --apiserver-advertise-address $1
+  kubeadm init --pod-network-cidr 10.244.0.0/16 --apiserver-advertise-address $1
   sleep 30
 	mkdir -p ~vagrant/.kube
 	cp -i /etc/kubernetes/admin.conf ~vagrant/.kube/config
@@ -192,6 +192,8 @@ Vagrant.configure(2) do |config|
       #  inline: "route del default gw 192.168.56.1"
 
       config.vm.provision :shell, :inline => update_hosts
+      
+      # Not really needed if we deploy without swap checking
       config.vm.provision :shell, :inline => disable_swap
 
       config.vm.provision "shell", inline: <<-SHELL

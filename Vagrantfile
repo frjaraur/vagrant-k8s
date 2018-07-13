@@ -154,9 +154,15 @@ Vagrant.configure(2) do |config|
 
       end
 
+      #config.vm.network "private_network",
+      #ip: node['mgmt_ip'],
+      #irtualbox__intnet: "LABS"
+
       config.vm.network "private_network",
       ip: node['mgmt_ip'],
-      virtualbox__intnet: "LABS"
+      virtualbox__intnet: false,
+      hostonlyadapter: ["vboxnet3"]
+
 
 
       #  config.vm.network "private_network",

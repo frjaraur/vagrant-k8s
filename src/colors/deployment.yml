@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: colors-deployment
+spec:
+  selector:
+    matchLabels:
+      app: colors
+  replicas: 2 
+  template:
+    metadata:
+      labels:
+        app: colors
+    spec:
+      containers:
+      - name: colors
+        image: frjaraur/colors:1.0
+        ports:
+        - containerPort: 3000
+

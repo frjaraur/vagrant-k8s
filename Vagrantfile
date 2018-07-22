@@ -130,8 +130,9 @@ Vagrant.configure(2) do |config|
     config.vm.define node['name'] do |config|
       config.vm.hostname = node['name']
       config.vm.provider "virtualbox" do |v|
+	v.linked_clone = true
         config.ssh.shell = "bash -c 'BASH_ENV=/etc/profile exec bash'"       
-	      v.customize [ "modifyvm", :id, "--uartmode1", "disconnected" ]
+	v.customize [ "modifyvm", :id, "--uartmode1", "disconnected" ]
         v.name = node['name']
         v.customize ["modifyvm", :id, "--memory", node['mem']]
         v.customize ["modifyvm", :id, "--cpus", node['cpu']]

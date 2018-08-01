@@ -1,0 +1,63 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: whiteapp
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: whiteapp
+    spec:
+      containers:
+      - name: whiteapp
+        image: frjaraur/colors:1.0
+        env:
+        - name: COLOR
+          value: white
+        ports:
+        - containerPort: 3000
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: blackapp
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: blackapp
+    spec:
+      containers:
+      - name: blackapp
+        image: frjaraur/colors:1.0
+        env:
+        - name: COLOR
+          value: black
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: whitesvc
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: whiteapp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blacksvc
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: blackapp
